@@ -93,3 +93,22 @@ class BGA():
         avg_population_fitness = sum(
             population_fitness) / len(population_fitness)
         return population_best_fitness, avg_population_fitness, population
+
+    def run(self):
+        avg_population_fitness = []
+        population_best_fitness = []
+        for i in range(0, self.max_round):
+            x, y = 0.0, 0.0
+            fitness_func = 21.5 + x*np.sin(4*np.pi*x) + y*np.sin(20*np.pi*y)
+            ga = BGA((100, 33), fitness_func, chrom_l=[
+                     18, 15], low=[-3, 4.1], high=[12.1, 5.8])
+            ga.initialization()
+            chrom_decoded = ga.chromosomeDecode()
+            b_f, p_f, p = ga.bestResult(chrom_decoded)
+            avg_population_fitness.append(p_f)
+            population_best_fitness.append(b_f)
+            selected_ind = ga.roulette_wheel_selection(chrom_decoded)
+            new_child = ga.selectInd(selected_ind)
+            new_pop = ga.mutation(new_child)
+            self.pop = new_pop
+        return population_best_fitness, avg_population_fitness
