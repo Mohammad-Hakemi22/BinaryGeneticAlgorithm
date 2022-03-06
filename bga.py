@@ -63,3 +63,33 @@ class BGA():
             case 1:
                 real = self.low[1] + (norm * (self.high[1] - self.low[1]))
                 return real
+
+    def roulette_wheel_selection(self, population):
+        chooses_ind = []
+        population_fitness = sum([self.fitnessFunc(population[i])
+                                 for i in range(0, population.shape[0])])
+        chromosome_probabilities = [self.fitnessFunc(
+            population[i])/population_fitness for i in range(0, population.shape[0])]
+        for i in range(0, population.shape[0]):
+            chooses_ind.append(np.random.choice([i for i in range(
+                0, len(chromosome_probabilities))], p=chromosome_probabilities))
+        return chooses_ind
+
+    def selectInd(self, chooses_ind):
+        new_pop = []
+        for i in range(0, len(chooses_ind), 2):
+            a, b = self.crossover(
+                self.pop[chooses_ind[i]], self.pop[chooses_ind[i+1]])
+            new_pop.append(a)
+            new_pop.append(b)
+        npa = np.asarray(new_pop, dtype=np.int32)
+        return npa
+
+    def bestResult(self, population):
+        population_best_fitness = max(
+            [self.fitnessFunc(population[i]) for i in range(0, population.shape[0])])
+        population_fitness = [self.fitnessFunc(
+            population[i]) for i in range(0, population.shape[0])]
+        avg_population_fitness = sum(
+            population_fitness) / len(population_fitness)
+        return population_best_fitness, avg_population_fitness, population
