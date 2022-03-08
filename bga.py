@@ -1,7 +1,9 @@
 import numpy as np
 from operator import xor
 import math
+import matplotlib.pyplot as plt
 
+plt.style.use('_mpl-gallery')
 
 class BGA():
     def __init__(self, pop_shape, fitness, pc=0.8, pm=0.01, max_round=100, chrom_l=[0, 0], low=[0, 0], high=[0, 0]):
@@ -64,6 +66,15 @@ class BGA():
                 real = self.low[1] + (norm * (self.high[1] - self.low[1]))
                 return real
 
+    def chromosomeDecode(self):
+        gen = []
+        for i in range(0, self.pop.shape[0]):
+            l1 = self.pop[i][0:self.chrom_l[0]]
+            l2 = self.pop[i][self.chrom_l[0]:]
+            gen.append(self.d2r(self.b2d(list(l1)), len(l1), 0))
+            gen.append(self.d2r(self.b2d(list(l2)), len(l2), 1))
+        return np.array(gen).reshape(self.pop.shape[0], 2)
+
     def roulette_wheel_selection(self, population):
         chooses_ind = []
         population_fitness = sum([self.fitnessFunc(population[i])
@@ -112,3 +123,15 @@ class BGA():
             new_pop = ga.mutation(new_child)
             self.pop = new_pop
         return population_best_fitness, avg_population_fitness
+
+    def plot(self, population_best_fitness, avg_population_fitness):
+        fig, ax = plt.subplots()
+        ax.plot([i for i in range(0, 100)],
+                avg_population_fitness, linewidth=2.0)
+        ax.plot([i for i in range(0, 100)],
+                population_best_fitness, linewidth=2.0)
+
+        ax.set(xlim=(0, 100), xticks=np.arange(1, 100),
+               ylim=(0, 40))
+
+        plt.show()
