@@ -3,7 +3,7 @@ from operator import xor
 import math
 import matplotlib.pyplot as plt
 
-plt.style.use('_mpl-gallery')
+plt.style.use('fivethirtyeight')
 
 class BGA():
     def __init__(self, pop_shape, fitness, pc=0.8, pm=0.01, max_round=100, chrom_l=[0, 0], low=[0, 0], high=[0, 0]):
