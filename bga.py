@@ -1,3 +1,5 @@
+from cProfile import label
+from xml.etree.ElementTree import PI
 import numpy as np
 from operator import xor
 import math
@@ -5,10 +7,10 @@ import matplotlib.pyplot as plt
 
 plt.style.use('fivethirtyeight')
 
+
 class BGA():
-    def __init__(self, pop_shape, fitness, pc=0.8, pm=0.01, max_round=100, chrom_l=[0, 0], low=[0, 0], high=[0, 0]):
+    def __init__(self, pop_shape, pc=0.9, pm=0.005, max_round=100, chrom_l=[0, 0], low=[0, 0], high=[0, 0]):
         self.pop_shape = pop_shape
-        self.method = fitness
         self.pc = pc
         self.pm = pm
         self.max_round = max_round
@@ -17,7 +19,8 @@ class BGA():
         self.high = high
 
     def initialization(self):
-        self.pop = np.random.randint(low=0, high=2, size=self.pop_shape)
+        pop = np.random.randint(low=0, high=2, size=self.pop_shape)
+        return pop
 
     def crossover(self, ind_0, ind_1):
         new_0, new_1 = [], []
@@ -66,14 +69,14 @@ class BGA():
                 real = self.low[1] + (norm * (self.high[1] - self.low[1]))
                 return real
 
-    def chromosomeDecode(self):
+    def chromosomeDecode(self, pop):
         gen = []
-        for i in range(0, self.pop.shape[0]):
-            l1 = self.pop[i][0:self.chrom_l[0]]
-            l2 = self.pop[i][self.chrom_l[0]:]
+        for i in range(0, pop.shape[0]):
+            l1 = pop[i][0:self.chrom_l[0]]
+            l2 = pop[i][self.chrom_l[0]:]
             gen.append(self.d2r(self.b2d(list(l1)), len(l1), 0))
             gen.append(self.d2r(self.b2d(list(l2)), len(l2), 1))
-        return np.array(gen).reshape(self.pop.shape[0], 2)
+        return np.array(gen).reshape(pop.shape[0], 2)
 
     def roulette_wheel_selection(self, population):
         chooses_ind = []
@@ -86,11 +89,11 @@ class BGA():
                 0, len(chromosome_probabilities))], p=chromosome_probabilities))
         return chooses_ind
 
-    def selectInd(self, chooses_ind):
+    def selectInd(self, chooses_ind, pop):
         new_pop = []
         for i in range(0, len(chooses_ind), 2):
             a, b = self.crossover(
-                self.pop[chooses_ind[i]], self.pop[chooses_ind[i+1]])
+                pop[chooses_ind[i]], pop[chooses_ind[i+1]])
             new_pop.append(a)
             new_pop.append(b)
         npa = np.asarray(new_pop, dtype=np.int32)
@@ -103,35 +106,30 @@ class BGA():
             population[i]) for i in range(0, population.shape[0])]
         avg_population_fitness = sum(
             population_fitness) / len(population_fitness)
-        return population_best_fitness, avg_population_fitness, population
+        return population_best_fitness, avg_population_fitness, population_fitness
 
     def run(self):
         avg_population_fitness = []
         population_best_fitness = []
+        population_fitness = []
+        ga = BGA((100, 33), chrom_l=[18, 15], low=[-3, 4.1], high=[12.1, 5.8])
+        n_pop = ga.initialization()
         for i in range(0, self.max_round):
-            x, y = 0.0, 0.0
-            fitness_func = 21.5 + x*np.sin(4*np.pi*x) + y*np.sin(20*np.pi*y)
-            ga = BGA((100, 33), fitness_func, chrom_l=[
-                     18, 15], low=[-3, 4.1], high=[12.1, 5.8])
-            ga.initialization()
-            chrom_decoded = ga.chromosomeDecode()
+            chrom_decoded = ga.chromosomeDecode(n_pop)
             b_f, p_f, p = ga.bestResult(chrom_decoded)
             avg_population_fitness.append(p_f)
             population_best_fitness.append(b_f)
+            population_fitness.append(p)
             selected_ind = ga.roulette_wheel_selection(chrom_decoded)
-            new_child = ga.selectInd(selected_ind)
+            new_child = ga.selectInd(selected_ind, n_pop)
             new_pop = ga.mutation(new_child)
-            self.pop = new_pop
-        return population_best_fitness, avg_population_fitness
+            n_pop = new_pop
+        return population_best_fitness, avg_population_fitness, population_fitness
 
-    def plot(self, population_best_fitness, avg_population_fitness):
+    def plot(self, population_best_fitness, avg_population_fitness, population_fitness):
         fig, ax = plt.subplots()
-        ax.plot([i for i in range(0, 100)],
-                avg_population_fitness, linewidth=2.0)
-        ax.plot([i for i in range(0, 100)],
-                population_best_fitness, linewidth=2.0)
-
-        ax.set(xlim=(0, 100), xticks=np.arange(1, 100),
-               ylim=(0, 40))
-
+        ax.plot(avg_population_fitness, linewidth=2.0, label="avg_fitness")
+        ax.plot(population_best_fitness, linewidth=2.0, label="best_fitness")
+        plt.legend(loc="lower right")
+        print(f"best solution: {max(population_best_fitness)}")
         plt.show()
