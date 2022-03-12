@@ -134,7 +134,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
-
+.vscode
 # Spyder project settings
 .spyderproject
 .spyproject
@@ -165,6 +165,19 @@ cython_debug/
 #  and can be added to the global gitignore or merged into this file.  For a more nuclear
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
+
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+
+# Local History for Visual Studio Code
+.history/
+
+# Built Visual Studio Code Extensions
+*.vsix
 
 .vscode/*
 !.vscode/settings.json
