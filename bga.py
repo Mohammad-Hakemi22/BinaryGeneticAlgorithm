@@ -8,8 +8,8 @@ import matplotlib.pyplot as plt
 plt.style.use('fivethirtyeight')
 
 
-class BGA():
-    def __init__(self, pop_shape, pc=0.9, pm=0.005, max_round=100, chrom_l=[0, 0], low=[0, 0], high=[0, 0]):
+class BGA(): #class binary genetic algorithm
+    def __init__(self, pop_shape, pc=0.9, pm=0.005, max_round=100, chrom_l=[0, 0], low=[0, 0], high=[0, 0]): #initialize param
         self.pop_shape = pop_shape
         self.pc = pc
         self.pm = pm
@@ -18,27 +18,27 @@ class BGA():
         self.low = low
         self.high = high
 
-    def initialization(self):
-        pop = np.random.randint(low=0, high=2, size=self.pop_shape)
+    def initialization(self): #initialize first population
+        pop = np.random.randint(low=0, high=2, size=self.pop_shape) #random number 0,1
         return pop
 
-    def crossover(self, ind_0, ind_1):
+    def crossover(self, ind_0, ind_1): # cross over for two individual (one point crossover)
         new_0, new_1 = [], []
-        assert(len(ind_0) == len(ind_1))
+        assert(len(ind_0) == len(ind_1)) #check two individuals have same lenght
         p_pc = np.random.random_sample(1)
-        if p_pc < self.pc:
+        if p_pc < self.pc: # doing crossover
             point = np.random.randint(len(ind_0))
             new_0 = list(np.hstack((ind_0[:point], ind_1[point:])))
             new_1 = list(np.hstack((ind_1[:point], ind_0[point:])))
-        else:
+        else: # Transfer without crossover
             new_0 = list(ind_0)
             new_1 = list(ind_1)
-        assert(len(new_0) == len(new_1))
+        assert(len(new_0) == len(new_1)) #check two new childs have same lenght
 
         return new_0, new_1
 
     def mutation(self, pop):
-        num_mut = math.ceil(self.pm * pop.shape[0] * pop.shape[1])
+        num_mut = math.ceil(self.pm * pop.shape[0] * pop.shape[1]) #Calculate the number of bits that must mutation
         for m in range(0, num_mut):
             i = np.random.randint(0, pop.shape[0])
             j = np.random.randint(0, pop.shape[1])
@@ -51,7 +51,7 @@ class BGA():
             real_val[1]*np.sin(20*np.pi*real_val[1])
         return fitness_val
 
-    def b2d(self, list_b):
+    def b2d(self, list_b): #convert binary number to decimal number
         l = len(list_b)
         sum = 0
         for i in range(0, l):
@@ -59,7 +59,7 @@ class BGA():
             sum += (pow(2, p) * list_b[i])
         return sum
 
-    def d2r(self, b2d, lenght_b, m):
+    def d2r(self, b2d, lenght_b, m): # Change the decimal number to fit in the range of problem variables
         norm = b2d/(pow(2, lenght_b) - 1)
         match m:
             case 0:
@@ -69,7 +69,7 @@ class BGA():
                 real = self.low[1] + (norm * (self.high[1] - self.low[1]))
                 return real
 
-    def chromosomeDecode(self, pop):
+    def chromosomeDecode(self, pop): #decoding the chromosome value for calculate fitness
         gen = []
         for i in range(0, pop.shape[0]):
             l1 = pop[i][0:self.chrom_l[0]]
@@ -83,13 +83,13 @@ class BGA():
         population_fitness = sum([self.fitnessFunc(population[i])
                                  for i in range(0, population.shape[0])])
         chromosome_probabilities = [self.fitnessFunc(
-            population[i])/population_fitness for i in range(0, population.shape[0])]
+            population[i])/population_fitness for i in range(0, population.shape[0])] #Calculate the probability of selecting each chromosome based on the fitness value
         for i in range(0, population.shape[0]):
             chooses_ind.append(np.random.choice([i for i in range(
-                0, len(chromosome_probabilities))], p=chromosome_probabilities))
-        return chooses_ind
+                0, len(chromosome_probabilities))], p=chromosome_probabilities)) #Chromosome selection based on their probability of selection
+        return chooses_ind # return selected individuals
 
-    def selectInd(self, chooses_ind, pop):
+    def selectInd(self, chooses_ind, pop): # Perform crossover on the selected population
         new_pop = []
         for i in range(0, len(chooses_ind), 2):
             a, b = self.crossover(
@@ -99,7 +99,7 @@ class BGA():
         npa = np.asarray(new_pop, dtype=np.int32)
         return npa
 
-    def bestResult(self, population):
+    def bestResult(self, population): #calculate best fitness, avg fitness
         population_best_fitness = max(
             [self.fitnessFunc(population[i]) for i in range(0, population.shape[0])])
         population_fitness = [self.fitnessFunc(
@@ -108,12 +108,12 @@ class BGA():
             population_fitness) / len(population_fitness)
         return population_best_fitness, avg_population_fitness, population_fitness
 
-    def run(self):
+    def run(self): # start algorithm
         avg_population_fitness = []
         population_best_fitness = []
         population_fitness = []
         ga = BGA((100, 33), chrom_l=[18, 15], low=[-3, 4.1], high=[12.1, 5.8])
-        n_pop = ga.initialization()
+        n_pop = ga.initialization() # initial first population
         for i in range(0, self.max_round):
             chrom_decoded = ga.chromosomeDecode(n_pop)
             b_f, p_f, p = ga.bestResult(chrom_decoded)
@@ -123,7 +123,7 @@ class BGA():
             selected_ind = ga.roulette_wheel_selection(chrom_decoded)
             new_child = ga.selectInd(selected_ind, n_pop)
             new_pop = ga.mutation(new_child)
-            n_pop = new_pop
+            n_pop = new_pop #Replace the new population
         return population_best_fitness, avg_population_fitness, population_fitness
 
     def plot(self, population_best_fitness, avg_population_fitness, population_fitness):
