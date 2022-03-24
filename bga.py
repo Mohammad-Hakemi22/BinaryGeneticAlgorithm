@@ -93,9 +93,10 @@ class BGA():  # class binary genetic algorithm
         p = [self.fitnessFunc(population[i])
              for i in range(0, population.shape[0])]
         scale_fitness = self.linearScaling(p)
+        sum_scale_fitness = sum(scale_fitness)
         # Calculate the probability of selecting each chromosome based on the fitness value
         chromosome_probabilities = [
-            p[i]/population_fitness for i in range(0, len(p))]
+            scale_fitness[i]/sum_scale_fitness for i in range(0, len(scale_fitness))]
         for i in range(0, population.shape[0]):
             chooses_ind.append(np.random.choice([i for i in range(
                 0, len(chromosome_probabilities))], p=chromosome_probabilities))  # Chromosome selection based on their probability of selection
