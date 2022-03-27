@@ -215,3 +215,5 @@ class BGA():  # class binary genetic algorithm
         plt.legend(loc="lower right")
         print(f"best solution: {max(population_best_fitness)}")
         plt.show()
+
+        
