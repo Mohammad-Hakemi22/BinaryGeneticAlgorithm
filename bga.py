@@ -1,5 +1,6 @@
 from audioop import avg
 from cProfile import label
+from random import randint, random
 from re import S
 from xml.etree.ElementTree import PI
 import numpy as np
@@ -146,6 +147,23 @@ class BGA():  # class binary genetic algorithm
         scale_fitness = np.exp(new_fitness)
         return scale_fitness
 
+    def linearRanking(self, population):
+        chooses_ind = []
+        q0 = 0.005
+        q = 0.015
+        population_fitness = [self.fitnessFunc(
+            population[i]) for i in range(0, population.shape[0])]
+        sorted_pop_fitness = np.sort(population_fitness, kind='heapsort')
+        sorted_pop_fitness = sorted_pop_fitness[::-1]
+        pop_probabilities = [(q - ((q - q0) * (((idx+1) - 1)/(100 - 1))))
+                             for idx, val in enumerate(sorted_pop_fitness)]
+        # a = sum(pop_probabilities)
+        # chooses_ind = np.random.choice([i for i in range(0, len(pop_probabilities))], p=pop_probabilities)
+        for i in range(0, population.shape[0]):
+            chooses_ind.append(np.random.choice([i for i in range(
+                0, len(pop_probabilities))], p=pop_probabilities))  # Chromosome selection based on their probability of selection
+        return chooses_ind
+
     def bestResult(self, population):  # calculate best fitness, avg fitness
         population_best_fitness = max(
             [self.fitnessFunc(population[i]) for i in range(0, population.shape[0])])
@@ -154,6 +172,21 @@ class BGA():  # class binary genetic algorithm
         avg_population_fitness = sum(
             population_fitness) / len(population_fitness)
         return population_best_fitness, avg_population_fitness, population_fitness
+
+    def tournamentSelection(self, population):
+        k = 2
+        tournament_winers = []
+        for t in range(self.max_round):
+            i_idx = randint(0, population.shape[0]-1)
+            j_idx = randint(0, population.shape[0]-1)
+            i = population[i_idx]
+            j = population[j_idx]
+            if random() < 1 / (1 + np.exp(-(self.fitnessFunc(i) - self.fitnessFunc(j)) / t+1)):
+                tournament_winers.append(i_idx)
+            else:
+                tournament_winers.append(i_idx)
+        return tournament_winers
+
 
     def run(self):  # start algorithm
         avg_population_fitness = []
@@ -167,8 +200,10 @@ class BGA():  # class binary genetic algorithm
             avg_population_fitness.append(p_f)
             population_best_fitness.append(b_f)
             population_fitness.append(p)
-            selected_ind = ga.roulette_wheel_selection(chrom_decoded, i)
-            new_child = ga.selectInd(selected_ind, n_pop)
+            # ch = ga.linearRanking(chrom_decoded)
+            ch1 = ga.tournementSelection(chrom_decoded)
+            # selected_ind = ga.roulette_wheel_selection(chrom_decoded, i)
+            new_child = ga.selectInd(ch1, n_pop)
             new_pop = ga.mutation(new_child)
             n_pop = new_pop  # Replace the new population
         return population_best_fitness, avg_population_fitness, population_fitness
