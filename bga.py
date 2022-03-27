@@ -86,13 +86,15 @@ class BGA():  # class binary genetic algorithm
             gen.append(self.d2r(self.b2d(list(l2)), len(l2), 1))
         return np.array(gen).reshape(pop.shape[0], 2)
 
-    def roulette_wheel_selection(self, population):
+    def roulette_wheel_selection(self, population, t):
         chooses_ind = []
         population_fitness = sum([self.fitnessFunc(population[i])
                                  for i in range(0, population.shape[0])])
         p = [self.fitnessFunc(population[i])
              for i in range(0, population.shape[0])]
-        scale_fitness = self.linearScaling(p)
+        # scale_fitness = self.linearScaling(p)
+        # scale_fitness = self.sigmaScaling(p)
+        scale_fitness = self.boltzmannSelection(p, t + 1)
         sum_scale_fitness = sum(scale_fitness)
         # Calculate the probability of selecting each chromosome based on the fitness value
         chromosome_probabilities = [
@@ -114,14 +116,34 @@ class BGA():  # class binary genetic algorithm
 
     def linearScaling(self, fitness):
         c = 2
+        fitness_max = np.argmax(fitness)
         avg_fitness = sum(fitness) / len(fitness)
         max_fitness = max(fitness)
+        fitness[fitness_max] = c * avg_fitness
         a = ((c - 1) * avg_fitness) / (max_fitness - avg_fitness)
         b = (1 - a) * avg_fitness
         scale_fitness = [((a * fit) + b) for fit in fitness]
         for i in range(len(scale_fitness)):
+            if i == fitness_max:
+                continue
             if scale_fitness[i] < 0:
                 scale_fitness[i] = 0
+        return scale_fitness
+
+    def sigmaScaling(self, fitness):
+        c = 2
+        avg_fitness = sum(fitness) / len(fitness)
+        standard_deviation = np.std(fitness)
+        scale_fitness = [(fit - (avg_fitness - (c * standard_deviation)))
+                         for fit in fitness]
+        for i in range(len(scale_fitness)):
+            if scale_fitness[i] < 0:
+                scale_fitness[i] = 0
+        return scale_fitness
+
+    def boltzmannSelection(self, fitness, t):
+        new_fitness = [fit/t for fit in fitness]
+        scale_fitness = np.exp(new_fitness)
         return scale_fitness
 
     def bestResult(self, population):  # calculate best fitness, avg fitness
@@ -145,7 +167,7 @@ class BGA():  # class binary genetic algorithm
             avg_population_fitness.append(p_f)
             population_best_fitness.append(b_f)
             population_fitness.append(p)
-            selected_ind = ga.roulette_wheel_selection(chrom_decoded)
+            selected_ind = ga.roulette_wheel_selection(chrom_decoded, i)
             new_child = ga.selectInd(selected_ind, n_pop)
             new_pop = ga.mutation(new_child)
             n_pop = new_pop  # Replace the new population
