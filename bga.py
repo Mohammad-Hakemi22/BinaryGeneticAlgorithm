@@ -176,12 +176,12 @@ class BGA():  # class binary genetic algorithm
     def tournamentSelection(self, population):
         k = 2
         tournament_winers = []
-        for t in range(self.max_round):
+        for t in range(self.max_round, 0, -1):
             i_idx = randint(0, population.shape[0]-1)
             j_idx = randint(0, population.shape[0]-1)
             i = population[i_idx]
             j = population[j_idx]
-            if random() < 1 / (1 + np.exp(-(self.fitnessFunc(i) - self.fitnessFunc(j)) / t+1)):
+            if random() < 1 / (1 + np.exp(-(self.fitnessFunc(i) - self.fitnessFunc(j)) / t)):
                 tournament_winers.append(i_idx)
             else:
                 tournament_winers.append(i_idx)
@@ -201,7 +201,7 @@ class BGA():  # class binary genetic algorithm
             population_best_fitness.append(b_f)
             population_fitness.append(p)
             # ch = ga.linearRanking(chrom_decoded)
-            ch1 = ga.tournementSelection(chrom_decoded)
+            ch1 = ga.tournamentSelection(chrom_decoded)
             # selected_ind = ga.roulette_wheel_selection(chrom_decoded, i)
             new_child = ga.selectInd(ch1, n_pop)
             new_pop = ga.mutation(new_child)
