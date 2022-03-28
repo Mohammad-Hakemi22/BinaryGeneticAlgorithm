@@ -1,5 +1,6 @@
 from audioop import avg
 from cProfile import label
+from email.policy import default
 from random import randint, random
 from re import S
 from xml.etree.ElementTree import PI
@@ -13,7 +14,7 @@ plt.style.use('fivethirtyeight')
 
 class BGA():  # class binary genetic algorithm
     # initialize param
-    def __init__(self, pop_shape, pc=0.9, pm=0.005, max_round=100, chrom_l=[0, 0], low=[0, 0], high=[0, 0]):
+    def __init__(self, pop_shape, pc=0.9, pm=0.005, max_round=100, chrom_l=[0, 0], low=[0, 0], high=[0, 0], selection=2, scaling=0):
         self.pop_shape = pop_shape
         self.pc = pc
         self.pm = pm
@@ -21,6 +22,8 @@ class BGA():  # class binary genetic algorithm
         self.chrom_l = chrom_l
         self.low = low
         self.high = high
+        self.selection = selection
+        self.scaling = scaling
 
     def initialization(self):  # initialize first population
         pop = np.random.randint(
@@ -87,19 +90,35 @@ class BGA():  # class binary genetic algorithm
             gen.append(self.d2r(self.b2d(list(l2)), len(l2), 1))
         return np.array(gen).reshape(pop.shape[0], 2)
 
-    def roulette_wheel_selection(self, population, t):
+    def roulette_wheel_selection(self, population):
         chooses_ind = []
         population_fitness = sum([self.fitnessFunc(population[i])
                                  for i in range(0, population.shape[0])])
-        p = [self.fitnessFunc(population[i])
+        chromosome_fitness = [self.fitnessFunc(population[i])
              for i in range(0, population.shape[0])]
-        # scale_fitness = self.linearScaling(p)
-        # scale_fitness = self.sigmaScaling(p)
-        scale_fitness = self.boltzmannSelection(p, t + 1)
-        sum_scale_fitness = sum(scale_fitness)
-        # Calculate the probability of selecting each chromosome based on the fitness value
-        chromosome_probabilities = [
-            scale_fitness[i]/sum_scale_fitness for i in range(0, len(scale_fitness))]
+
+        match self.scaling:
+            case 0:
+                # Calculate the probability of selecting each chromosome based on the fitness value
+                chromosome_probabilities = [
+                    chromosome_fitness[i]/population_fitness for i in range(0, len(chromosome_fitness))]
+            case 1:
+                scale_fitness = self.linearScaling(chromosome_fitness)
+                sum_scale_fitness = sum(scale_fitness)
+                chromosome_probabilities = [
+                    scale_fitness[i]/sum_scale_fitness for i in range(0, len(scale_fitness))]
+            case 2:
+                scale_fitness = self.sigmaScaling(chromosome_fitness)
+                sum_scale_fitness = sum(scale_fitness)
+                chromosome_probabilities = [
+                    scale_fitness[i]/sum_scale_fitness for i in range(0, len(scale_fitness))]
+            case 3:
+                scale_fitness = self.boltzmannSelection(chromosome_fitness)
+                sum_scale_fitness = sum(scale_fitness)
+                chromosome_probabilities = [
+                    scale_fitness[i]/sum_scale_fitness for i in range(0, len(scale_fitness))]
+  
+
         for i in range(0, population.shape[0]):
             chooses_ind.append(np.random.choice([i for i in range(
                 0, len(chromosome_probabilities))], p=chromosome_probabilities))  # Chromosome selection based on their probability of selection
@@ -142,8 +161,10 @@ class BGA():  # class binary genetic algorithm
                 scale_fitness[i] = 0
         return scale_fitness
 
-    def boltzmannSelection(self, fitness, t):
-        new_fitness = [fit/t for fit in fitness]
+    def boltzmannSelection(self, fitness):
+        new_fitness = []
+        for i in range(0, self.max_round):
+            new_fitness.append(fitness[i]/(self.max_round-i))
         scale_fitness = np.exp(new_fitness)
         return scale_fitness
 
@@ -157,8 +178,7 @@ class BGA():  # class binary genetic algorithm
         sorted_pop_fitness = sorted_pop_fitness[::-1]
         pop_probabilities = [(q - ((q - q0) * (((idx+1) - 1)/(100 - 1))))
                              for idx, val in enumerate(sorted_pop_fitness)]
-        # a = sum(pop_probabilities)
-        # chooses_ind = np.random.choice([i for i in range(0, len(pop_probabilities))], p=pop_probabilities)
+
         for i in range(0, population.shape[0]):
             chooses_ind.append(np.random.choice([i for i in range(
                 0, len(pop_probabilities))], p=pop_probabilities))  # Chromosome selection based on their probability of selection
@@ -187,12 +207,12 @@ class BGA():  # class binary genetic algorithm
                 tournament_winers.append(i_idx)
         return tournament_winers
 
-
     def run(self):  # start algorithm
         avg_population_fitness = []
         population_best_fitness = []
         population_fitness = []
-        ga = BGA((100, 33), chrom_l=[18, 15], low=[-3, 4.1], high=[12.1, 5.8])
+        ga = BGA((100, 33), chrom_l=[18, 15],
+                 low=[-3, 4.1], high=[12.1, 5.8], selection=1, scaling=1)
         n_pop = ga.initialization()  # initial first population
         for i in range(0, self.max_round):
             chrom_decoded = ga.chromosomeDecode(n_pop)
@@ -200,10 +220,15 @@ class BGA():  # class binary genetic algorithm
             avg_population_fitness.append(p_f)
             population_best_fitness.append(b_f)
             population_fitness.append(p)
-            # ch = ga.linearRanking(chrom_decoded)
-            ch1 = ga.tournamentSelection(chrom_decoded)
-            # selected_ind = ga.roulette_wheel_selection(chrom_decoded, i)
-            new_child = ga.selectInd(ch1, n_pop)
+            match self.selection:
+                case 0:
+                    selected_ind = ga.linearRanking(chrom_decoded)
+                case 1:
+                    selected_ind = ga.tournamentSelection(chrom_decoded)
+                case 2:
+                    selected_ind = ga.roulette_wheel_selection(
+                        chrom_decoded)
+            new_child = ga.selectInd(selected_ind, n_pop)
             new_pop = ga.mutation(new_child)
             n_pop = new_pop  # Replace the new population
         return population_best_fitness, avg_population_fitness, population_fitness
