@@ -1,6 +1,3 @@
-from audioop import avg
-from cProfile import label
-from email.policy import default
 from random import randint, random
 from re import S
 from xml.etree.ElementTree import PI
@@ -95,9 +92,9 @@ class BGA():  # class binary genetic algorithm
         population_fitness = sum([self.fitnessFunc(population[i])
                                  for i in range(0, population.shape[0])])
         chromosome_fitness = [self.fitnessFunc(population[i])
-             for i in range(0, population.shape[0])]
+                              for i in range(0, population.shape[0])]
 
-        match self.scaling:
+        match self.scaling:  # Which of the scales to apply
             case 0:
                 # Calculate the probability of selecting each chromosome based on the fitness value
                 chromosome_probabilities = [
@@ -117,7 +114,6 @@ class BGA():  # class binary genetic algorithm
                 sum_scale_fitness = sum(scale_fitness)
                 chromosome_probabilities = [
                     scale_fitness[i]/sum_scale_fitness for i in range(0, len(scale_fitness))]
-  
 
         for i in range(0, population.shape[0]):
             chooses_ind.append(np.random.choice([i for i in range(
@@ -211,8 +207,10 @@ class BGA():  # class binary genetic algorithm
         avg_population_fitness = []
         population_best_fitness = []
         population_fitness = []
+        # selection: 0 -> linearRanking; 1 -> tournamentSelection; 2 -> roulette_wheel_selection
+        # scaling: 0 -> without scaling; 1 -> linearScaling; 2 -> sigmaScaling; 3 -> boltzmannSelection
         ga = BGA((100, 33), chrom_l=[18, 15],
-                 low=[-3, 4.1], high=[12.1, 5.8], selection=1, scaling=1)
+                 low=[-3, 4.1], high=[12.1, 5.8], selection=2, scaling=1)
         n_pop = ga.initialization()  # initial first population
         for i in range(0, self.max_round):
             chrom_decoded = ga.chromosomeDecode(n_pop)
@@ -220,7 +218,7 @@ class BGA():  # class binary genetic algorithm
             avg_population_fitness.append(p_f)
             population_best_fitness.append(b_f)
             population_fitness.append(p)
-            match self.selection:
+            match self.selection:  # Which of the selection methods to apply
                 case 0:
                     selected_ind = ga.linearRanking(chrom_decoded)
                 case 1:
@@ -240,5 +238,3 @@ class BGA():  # class binary genetic algorithm
         plt.legend(loc="lower right")
         print(f"best solution: {max(population_best_fitness)}")
         plt.show()
-
-        
