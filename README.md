@@ -37,6 +37,6 @@ Two functions for selection:
 2.Tournament Selection
 <br>
 <br>
-<img src="https://github.com/Mohammad-Hakemi22/BinaryGeneticAlgorithm/blob/master/linear_ranking.png" width="700" height="400"/>
+<img src="https://github.com/Mohammad-Hakemi22/BinaryGeneticAlgorithm/blob/master/binary_tournament_selection.png" width="700" height="400"/>
 <br>
 <br>
