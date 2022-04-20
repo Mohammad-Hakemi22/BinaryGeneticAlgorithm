@@ -11,7 +11,7 @@ plt.style.use('fivethirtyeight')
 
 class BGA():  # class binary genetic algorithm
     # initialize param
-    def __init__(self, pop_shape, pc=0.9, pm=0.005, max_round=100, chrom_l=[0, 0], low=[0, 0], high=[0, 0], selection=2, scaling=0):
+    def __init__(self, pop_shape, pc=0.9, pm=0.005, max_round=100, chrom_l=[0, 0], low=[0, 0], high=[0, 0], selection=2, scaling=0, crossovermode=2):
         self.pop_shape = pop_shape
         self.pc = pc
         self.pm = pm
@@ -21,6 +21,7 @@ class BGA():  # class binary genetic algorithm
         self.high = high
         self.selection = selection
         self.scaling = scaling
+        self.crossovermode = crossovermode
 
     def initialization(self):  # initialize first population
         pop = np.random.randint(
@@ -43,6 +44,129 @@ class BGA():  # class binary genetic algorithm
         assert(len(new_0) == len(new_1))
 
         return new_0, new_1
+
+    def nonUniformCrossoverBasedOnMask(self, population, chromosoms):
+        k = int(self.pop_shape[0] / 4)
+        negative_pop = []
+        positive_pop = []
+        negative_chrom = []
+        positive_chrom = []
+        pattern_mask = []
+        positive_mask = []
+        negative_mask = []
+        new_pop = []
+        ones = 0
+
+        population_fitness = [self.fitnessFunc(
+            population[i]) for i in range(0, population.shape[0])]
+        sorted_pop_fitness = np.argsort(population_fitness, kind='heapsort')
+        sorted_pop_fitness = sorted_pop_fitness[::-1]
+        positive_pop = sorted_pop_fitness[:k]
+        negative_pop = sorted_pop_fitness[self.pop_shape[0]-k:]
+
+        for p in positive_pop:
+            positive_chrom.append(chromosoms[p])
+
+        for n in negative_pop:
+            negative_chrom.append(chromosoms[n])
+
+        for j in range(0, len(positive_chrom[0])):
+            ones = 0
+            for i in range(0, len(positive_chrom)):
+                if positive_chrom[i][j] == 1:
+                    ones += 1
+
+            if ones > 12:
+                positive_mask.append(1)
+            elif ones <= 12:
+                positive_mask.append(0)
+
+        for j in range(0, len(negative_chrom[0])):
+            ones = 0
+            for i in range(0, len(negative_chrom)):
+                if negative_chrom[i][j] == 1:
+                    ones += 1
+
+            if ones > 12:
+                negative_mask.append(1)
+            elif ones <= 12:
+                negative_mask.append(0)
+
+        for i in range(0, len(positive_mask)):
+            if positive_mask[i] == negative_mask[i]:
+                pattern_mask.append('x')
+            elif positive_mask[i] != negative_mask[i]:
+                pattern_mask.append(positive_mask[i])
+
+        for i in range(0, 100):
+            p1 = chromosoms[randint(0,99)]
+            p2 = chromosoms[randint(0,99)]
+            new_pop.append(self.checkConditions(p1, p2, pattern_mask))
+
+        new_pop = np.asarray(new_pop, dtype=np.int32)
+        return new_pop
+
+
+    def checkConditions(self, p1, p2, pattern_mask):
+        off = []
+        for j in range(0, len(pattern_mask)):
+            if p1[j] == p2[j]:
+                if pattern_mask[j] == p1[j] or pattern_mask[j] == 'x':
+                    off.append(p1[j])
+                elif pattern_mask[j] != p1[j]:
+                    if self.pfCalculator():
+                        off.append(pattern_mask[j])
+                    else:
+                        off.append(p1[j])
+            else:
+                if pattern_mask[j] == 'x':
+                    if self.psCalculator(p1, p2):
+                        off.append(p1[j])
+                    else:
+                        off.append(p2[j])
+                elif pattern_mask[j] == 0 or pattern_mask[j] == 1:
+                    if self.pfCalculator():
+                        off.append(pattern_mask[j])
+                    else:
+                        if self.psCalculator(p1, p2):
+                            off.append(p1[j])
+                        else:
+                            off.append(p2[j])
+        return off
+
+    def pfCalculator(self):
+        pf = 0.7
+        if np.random.random_sample() < pf:
+            return True
+        else:
+            return False
+
+    def psCalculator(self, p1, p2):
+        ps = 0
+        parents = []
+        parents.append(p1)
+        parents.append(p2)
+        parents = np.array(parents).reshape(2, 33)
+        real_val = self.chromosomeDecode(parents)
+        fit1 = self.fitnessFunc(real_val[0])
+        fit2 = self.fitnessFunc(real_val[1])
+        ps = fit1 / (fit1 + fit2)
+        if np.random.random_sample() < ps:
+            return True
+        else:
+            return False
+
+
+    def multiParentCrossover(self, p1, p2, p3):
+        point1 =  np.random.randint(1, len(p1))
+        point2 =  np.random.randint(point1, len(p1))
+
+        new_1 = list(np.hstack((p1[:point1], p3[point1:point2], p2[point2:])))
+        new_2 = list(np.hstack((p2[:point1], p1[point1:point2], p3[point2:])))
+        new_3 = list(np.hstack((p3[:point1], p2[point1:point2], p1[point2:])))
+
+        return new_1, new_2, new_3
+
 
     def mutation(self, pop):
         # Calculate the number of bits that must mutation
@@ -130,6 +254,23 @@ class BGA():  # class binary genetic algorithm
         npa = np.asarray(new_pop, dtype=np.int32)
         return npa
 
+
+    def selectIndMultiParent(self, chooses_ind, pop):
+        new_pop = []
+        for i in range(0, len(chooses_ind), 3):
+            if i == 99:
+                new_pop.append(list(pop[chooses_ind[i]]))
+                break
+            a, b, c = self.multiParentCrossover(
+                pop[chooses_ind[i]], pop[chooses_ind[i+1]], pop[chooses_ind[i+2]])
+            new_pop.append(a)
+            new_pop.append(b)
+            new_pop.append(c)
+       
+        npa = np.asarray(new_pop, dtype=np.int32)
+        return npa
+
+
     def linearScaling(self, fitness):
         c = 2
         fitness_max = np.argmax(fitness)
@@ -181,13 +322,13 @@ class BGA():  # class binary genetic algorithm
         return chooses_ind
 
     def bestResult(self, population):  # calculate best fitness, avg fitness
-        population_best_fitness = max(
-            [self.fitnessFunc(population[i]) for i in range(0, population.shape[0])])
-        population_fitness = [self.fitnessFunc(
-            population[i]) for i in range(0, population.shape[0])]
+        population_fitness = [self.fitnessFunc(population[i]) for i in range(0, population.shape[0])]
+        population_best_fitness = max(population_fitness)
+        agents_index = np.argmax(population_fitness)
+        agents = population[agents_index]
         avg_population_fitness = sum(
             population_fitness) / len(population_fitness)
-        return population_best_fitness, avg_population_fitness, population_fitness
+        return population_best_fitness, avg_population_fitness, population_fitness, agents
 
     def tournamentSelection(self, population):
         k = 2
@@ -207,34 +348,45 @@ class BGA():  # class binary genetic algorithm
         avg_population_fitness = []
         population_best_fitness = []
         population_fitness = []
+        agents = []
         # selection: 0 -> linearRanking; 1 -> tournamentSelection; 2 -> roulette_wheel_selection
         # scaling: 0 -> without scaling; 1 -> linearScaling; 2 -> sigmaScaling; 3 -> boltzmannSelection
+        # crossover: 0 -> two points; 1-> three parents, three child; 2-> non-uniform based on mask
         ga = BGA((100, 33), chrom_l=[18, 15],
-                 low=[-3, 4.1], high=[12.1, 5.8], selection=2, scaling=1)
+                 low=[-3, 4.1], high=[12.1, 5.8], selection=2, scaling=2, crossovermode=0)
         n_pop = ga.initialization()  # initial first population
         for i in range(0, self.max_round):
             chrom_decoded = ga.chromosomeDecode(n_pop)
-            b_f, p_f, p = ga.bestResult(chrom_decoded)
+            b_f, p_f, p, a = ga.bestResult(chrom_decoded)
             avg_population_fitness.append(p_f)
             population_best_fitness.append(b_f)
             population_fitness.append(p)
-            match self.selection:  # Which of the selection methods to apply
-                case 0:
-                    selected_ind = ga.linearRanking(chrom_decoded)
-                case 1:
-                    selected_ind = ga.tournamentSelection(chrom_decoded)
-                case 2:
-                    selected_ind = ga.roulette_wheel_selection(
-                        chrom_decoded)
-            new_child = ga.selectInd(selected_ind, n_pop)
+            agents.append(a)
+            
+            if ga.crossovermode == 2:
+                new_child = ga.nonUniformCrossoverBasedOnMask(chrom_decoded, n_pop)
+            elif ga.crossovermode == 0 or ga.crossovermode == 1:
+                match ga.selection:  # Which of the selection methods to apply
+                    case 0:
+                        selected_ind = ga.linearRanking(chrom_decoded)
+                    case 1:
+                        selected_ind = ga.tournamentSelection(chrom_decoded)
+                    case 2:
+                        selected_ind = ga.roulette_wheel_selection(
+                            chrom_decoded)
+            if ga.crossovermode == 0:
+                new_child = ga.selectInd(selected_ind, n_pop)
+            elif ga.crossovermode == 1:
+                new_child = ga.selectIndMultiParent(selected_ind, n_pop)
             new_pop = ga.mutation(new_child)
             n_pop = new_pop  # Replace the new population
-        return population_best_fitness, avg_population_fitness, population_fitness
+        return population_best_fitness, avg_population_fitness, population_fitness, agents
 
-    def plot(self, population_best_fitness, avg_population_fitness, population_fitness):
+    def plot(self, population_best_fitness, avg_population_fitness, population_fitness, agents):
         fig, ax = plt.subplots()
         ax.plot(avg_population_fitness, linewidth=2.0, label="avg_fitness")
         ax.plot(population_best_fitness, linewidth=2.0, label="best_fitness")
         plt.legend(loc="lower right")
         print(f"best solution: {max(population_best_fitness)}")
+        print(f"best solution agents: {agents[np.argmax(population_best_fitness)]}")
         plt.show()
